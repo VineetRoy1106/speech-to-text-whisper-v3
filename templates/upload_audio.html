@@ -1,0 +1,23 @@
+
+
+{% extends 'base.html' %}
+   
+   {% block content %}
+   {% csrf_token %}
+   <h1>Upload Audio</h1>
+   <!-- <form action="transcribe" method="post"></form> -->
+   <form method="post" enctype="multipart/form-data" action="transcribe">
+      {% csrf_token %}
+      <label for="audio"><strong>Upload Audio: </strong></label>
+      <input type="file" name="audio" accept="audio/*"><br><br>
+      <!-- <label for="image"><strong>Upload Image: </strong></label>
+      <input type="file" name="image" accept="image/jpeg"><br><br> -->
+      <button type="submit">Submit</button>
+  </form>
+
+   
+
+   {% endblock %}
+
+   
+    
