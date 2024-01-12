@@ -96,4 +96,4 @@ def transcribe_youtube(request):
                 "text": transcribed_text
             })
     except Exception as e:
-        return HttpResponse(f"<h1>{e}")
+        return HttpResponse(f"<h1>{e}</h1>")
