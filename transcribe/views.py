@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from transformers import pipeline
-import youtube_dl
+from pytube import YouTube
+import os
 
 print("Instantiating the transcriber")
 transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
@@ -63,26 +64,33 @@ def transcribe_youtube(request):
     print("Bhai request aa gyi..........")
     try:
         if request.method == 'POST':
-            youtube_url = request.POST.get("youtube_url")
+            print("inside post")
+            # youtube_url = request.POST.get("youtube_url")
+            youtube_url = request.POST["youtube_url"]
             print(f"YouTube URL: {youtube_url}")
 
             # Download audio from YouTube video
-            video = youtube_dl(youtube_url)
-            audio_stream = video.streams.filter(only_audio=True).first()
-            audio_file_path = f"media/{video.title}.mp3"  # Save the audio file in the media directory
-            audio_stream.download(output_path="media", filename=video.title)
+            yt = YouTube(youtube_url)
+            print("Bhai request aa gyi..........")
+            audio_stream = yt.streams.filter(only_audio=True).first()
+            media_directory = "media/"
+            os.makedirs(media_directory, exist_ok=True)
+            audio_file_path = f"{yt.title.replace('|', '_')}.mp3"
+
+            # audio_stream.download(output_path="media/", filename=yt.title)
+            audio_stream.download(output_path="media/", filename=audio_file_path)
 
             # Save the audio file in the Document model
-            audio_file = Document.objects.create(
-                name=video.title,
-                file=audio_file_path
-            )
+            print("Bhai bahut badia..........")
+
+            print("Bhai start transcribe..........")
 
             # Transcribe the audio
-            transcribed_text = transcriber(audio_file_path)['text']
+            transcribed_text = transcriber(f"media/{audio_file_path}")['text']
+            print("Bhai hogaya transcribe..........")
 
             # Remove the downloaded audio file
-            os.remove(audio_file_path)
+            os.remove(f"media/{audio_file_path}")
 
             return render(request, 'success.html', {
                 "text": transcribed_text
