@@ -27,12 +27,12 @@ SECRET_KEY = 'django-insecure-vnaouh30sr@ei$+qc=&_uw&(i2tmjzp!eiqzcblx%!&^^m))kd
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "3.234.240.247"
+    "18.234.31.102",
+    # "0.0.0.0",
+    # "127.0.0.1"
 ]
 
 # middleware.py
-
-import torch
 
 import torch
 torch.cuda.set_per_process_memory_fraction(0.5)  # Set the memory allocation fraction to 50%

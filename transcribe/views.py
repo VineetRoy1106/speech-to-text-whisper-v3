@@ -3,12 +3,13 @@ from transformers import pipeline
 from pytube import YouTube
 import os
 
-print("Instantiating the transcriber")
-transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
-print("Loaded the transcriber")
+# print("Instantiating the transcriber")
+# transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
+# print("Loaded the transcriber")
 
 
 import os
+from uuid import uuid4
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_http_methods
@@ -39,21 +40,40 @@ def transcribe_audio(request):
         if request.method == 'POST':
             audio = request.FILES["audio"]
             print(f"audio: {audio}")
+            
+            audioname= uuid4().__str__()+".mp3"
+            audio.name= audioname
 
             audio_file = Document.objects.create(
                                         name=audio.name,
                                         file=audio
                                         )
+            
+            os.rename(
+                f"media/{audio.name}",
+                f"media/{audioname}",
+                
+                )
             # print(f"audio_file: {audio_file.name}")
 
             # tc= TranscriberClass()
 
 
-            transcribed_text = transcriber(f"media/{audio.name}")['text']
+            # transcribed_text = transcriber(f"media/{audio.name}")['text']
+            os.system(f"python whisper-diarization/diarize.py -a media/{audioname} --whisper-model large-v3")
+            srt= f"media/{audioname[:-4]}.srt"
+            txt= f"media/{audioname[:-4]}.txt"
+            transcribed_text= ""
+            with open(srt) as f:
+                transcribed_text= f.read()
 
             print(f"Transcribed Text: {transcribed_text}")
-
-            os.remove(f"media/{audio.name}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            os.remove(f"media/{audioname}")
+            os.remove(srt)
+            print(f"txt= {txt}")
+            os.remove(txt)
+            
 
             return render(request, 'success.html', {
                 "text":transcribed_text
@@ -73,7 +93,6 @@ def transcribe_youtube(request):
     try:
         if request.method == 'POST':
             print("inside post")
-            # youtube_url = request.POST.get("youtube_url")
             youtube_url = request.POST["youtube_url"]
             print(f"YouTube URL: {youtube_url}")
 
@@ -85,7 +104,7 @@ def transcribe_youtube(request):
             audio_stream = yt.streams.filter(only_audio=True).first()
             media_directory = "media/"
             os.makedirs(media_directory, exist_ok=True)
-            audio_file = f"{yt.title.replace('|', '_')}.mp3"
+            audio_file = f"{uuid4().__str__()}.mp3"
 
             # audio_stream.download(output_path="media/", filename=yt.title)
             audio_stream.download(output_path="media/", filename=audio_file)
@@ -94,13 +113,28 @@ def transcribe_youtube(request):
             print("Bhai bahut badia..........")
 
             print("Bhai start transcribe..........")
+            audio_file= f"media/{audio_file}"
 
             # Transcribe the audio
-            transcribed_text = transcriber(f"media/{audio_file}")['text']
-            print("Bhai hogaya transcribe..........")
+            # transcribed_text = transcriber(f"media/{audio_file}")['text']
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
 
-            # Remove the downloaded audio file
-            os.remove(f"media/{audio_file}")
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            os.remove(audio_file)
+            os.remove(srt)
+            print(f"txt= {txt}")
+            os.remove(txt)
+            
+            
+            print("Bhai hogaya transcribe..........")
 
             return render(request, 'success.html', {
                 "text": transcribed_text
