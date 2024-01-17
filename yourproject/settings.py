@@ -26,7 +26,9 @@ SECRET_KEY = 'django-insecure-vnaouh30sr@ei$+qc=&_uw&(i2tmjzp!eiqzcblx%!&^^m))kd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "3.234.240.247"
+]
 
 # middleware.py
 
