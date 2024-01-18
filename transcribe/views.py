@@ -2,7 +2,7 @@ from django.shortcuts import render
 from transformers import pipeline
 from pytube import YouTube
 import os
-
+import shutil
 # print("Instantiating the transcriber")
 # transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
 # print("Loaded the transcriber")
@@ -143,53 +143,151 @@ def transcribe_youtube(request):
         return HttpResponse(f"<h1>{e}</h1>")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ...MEGA NZ
+
+def meganz_upload_video(request):
+    return render(request, 'meganz.html')
+
+def transcribe_meganz_video(request):
+    print("Bhai request aa gyi..........")
+    uid= uuid4().__str__()
+    nz_folder= f"dummy_nz/{uid}"
+    os.makedirs(nz_folder)
+    try:
+        if request.method == 'POST':
+            print("inside post")
+            mega_url = request.POST["mega_url"]
+            print(f"MEGA.nz URL: {mega_url}")
+
+            os.system(
+                f"mega-get {mega_url} {nz_folder}"
+            )
+            
+            audio_file= f'media/{uid}.mp3'
+            
+            # convert audio2video
+            video_file= f'{nz_folder}/{os.listdir(nz_folder)[0]}'
+            print(f"downloaded video file: {video_file}")
+            clip= mp.VideoFileClip(video_file)
+            clip.audio.write_audiofile(audio_file)
+            
+            
+            
+            
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            os.remove(audio_file)
+            os.remove(srt)
+            print(f"txt= {txt}")
+            os.remove(txt)
+            
+            
+            print("Bhai hogaya transcribe..........")
+            shutil.rmtree(nz_folder)
+            return render(request, 'success.html', {
+                "text": transcribed_text
+            })
+    except Exception as e:
+        shutil.rmtree(nz_folder)
+        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import moviepy.editor as mp
 
 def upload_video(request):
     return render(request, 'video.html')
 
-import re
 
-def hi(request):
-    try:
-        if request.method == 'POST':
-            video = request.FILES["video"]
-            print(f"Video: {video}")
-            
 
-            # Save the video file temporarily
-            video_file = Document.objects.create(
-                                        name=video.name,   
-                                        file = video                                                                      
-                                        )
-            
-            print('starting video to audio')
 
-            video_path = os.path.join('media', video.name)
-            print(f"Video Path: {video_path}")
-            print( f"media/{video.name}")
 
-            # Convert the video to audio            
-            clip = mp.VideoFileClip( f"media/{video.name}")
-            print("Accessed video")
 
-            clip.audio.write_audiofile(f"media/{video.name}")
 
-            print("audio mein convert hogayi")
-            # Transcribe the audio
-            transcribed_text = transcriber(f"media/{video.name}")['text']
-            
-            print(f"Transcribed Text: {transcribed_text}")
-            
-            # Remove the video and audio files
-            
-            os.remove(f"media/{video.name}")
-            
-            return render(request, 'success.html', {
-                "text":transcribed_text
-            })
-    except Exception as e:
-        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
    
 import os
 from django.http import HttpResponse
