@@ -3,6 +3,7 @@ from transformers import pipeline
 from pytube import YouTube
 import os
 import shutil
+from .fb_scrape import extract_video_from_url
 # print("Instantiating the transcriber")
 # transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
 # print("Loaded the transcriber")
@@ -212,6 +213,65 @@ def transcribe_meganz_video(request):
             os.remove(srt)
             print(f"txt= {txt}")
             os.remove(txt)
+            
+            
+            print("Bhai hogaya transcribe..........")
+            shutil.rmtree(nz_folder)
+            return render(request, 'success.html', {
+                "text": transcribed_text
+            })
+    except Exception as e:
+        shutil.rmtree(nz_folder)
+        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ...MEGA NZ
+
+def fb_upload_video(request):
+    return render(request, 'facebook.html')
+
+def transcribe_fb_video(request):
+    print("Bhai request aa gyi..........")
+    uid= uuid4().__str__()
+    nz_folder= f"dummy_fb/{uid}"
+    os.makedirs(nz_folder)
+    try:
+        if request.method == 'POST':
+            print("inside post")
+            fb_url = request.POST["fb_url"]
+            print(f"FB URL: {fb_url}")
+
+
+            audio_file_mp4= f'{nz_folder}/{uid}.mp4'
+            audio_file= f'{nz_folder}/{uid}.mp3'
+            
+            
+            extract_video_from_url(url= fb_url, mp4_filename=audio_file_mp4)
+            
+            
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file_mp4} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
             
             
             print("Bhai hogaya transcribe..........")

@@ -1,3 +1,5 @@
 transformers
 pytube
 moviepy
+selenium
+beautifulsoup4
