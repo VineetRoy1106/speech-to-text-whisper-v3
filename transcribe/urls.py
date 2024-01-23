@@ -12,6 +12,8 @@ urlpatterns = [
     path('meganzvideo/transcribemeganz', views.transcribe_meganz_video, name='transcribe_meganz_upload_video'),
     path('fbvideo/', views.fb_upload_video, name='fb_upload_video'),
     path('fbvideo/transcribefb', views.transcribe_fb_video, name='transcribe_fb_upload_video'),
+    path('gdrive/', views.gdrive_upload_video, name='gdrive_upload_video'),
+    path('gdrive/transcribegdrive', views.transcribe_gdrive_video, name='transcribe_gdrive_upload_video'),
     path('upload_video/', views.upload_video, name='upload_video'),
     path('upload_video/video_to_audio', views.video_to_audio, name='video_to_audio')
 

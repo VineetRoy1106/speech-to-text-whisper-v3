@@ -237,7 +237,76 @@ def transcribe_meganz_video(request):
 
 
 
-# ...MEGA NZ
+
+
+
+
+
+
+import gdown
+# ...GDrive
+
+def gdrive_upload_video(request):
+    return render(request, 'gdrive.html')
+
+def transcribe_gdrive_video(request):
+    print("Bhai request aa gyi..........")
+    uid= uuid4().__str__()
+    nz_folder= f"dummy_nz/{uid}"
+    os.makedirs(nz_folder)
+    try:
+        if request.method == 'POST':
+            print("inside post")
+            file_id = request.POST["gdrivefileid"]
+            file_id= file_id.replace('https://drive.google.com/file/d/', '')
+            file_id= file_id[: file_id.index('/')]
+            
+            print(f"gdrive_file_id: {file_id}")
+            url = f'https://drive.google.com/uc?id={file_id}'
+            
+            audio_file_mp4= f'{nz_folder}/{uid}.mp4'
+            audio_file= f'{nz_folder}/{uid}.mp3'
+            
+            
+            gdown.download(url, audio_file_mp4, quiet=False)
+            
+            
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file_mp4} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            
+            
+            print("Bhai hogaya transcribe..........")
+            shutil.rmtree(nz_folder)
+            return render(request, 'success.html', {
+                "text": transcribed_text
+            })
+    except Exception as e:
+        shutil.rmtree(nz_folder)
+        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ...FB
 
 def fb_upload_video(request):
     return render(request, 'facebook.html')
@@ -355,13 +424,14 @@ from django.shortcuts import render
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
 
-def video_to_audio(request):
+def video_to_audio(request):    
     try:
         if request.method == 'POST':
             video = request.FILES["video"]
             print(f"Video: {video}")
 
-            video = video.name.replace(' ', '_')
+            videoname= uuid4().__str__()+".mp4"
+            video.name= videoname
 
             # Save the video file temporarily
             video_file = Document.objects.create(
@@ -369,29 +439,30 @@ def video_to_audio(request):
                                         file = video                                                                      
                                         )
             
-            video_path = f"media/{video.name}"
+            os.rename(
+                f"media/{video.name}",
+                f"media/{videoname}",
+                
+                )
+            
+            audio_file= f"media/{videoname}"
 
-            print('Starting video to audio')
-
-            print(f"media/{video.name}")
-
-            # Convert the video to audio
-            clip = VideoFileClip(video_path)
-            audio = clip.audio
-
-            # Write the audio file using 'mp3' codec
-            audio.write_audiofile(f"{video_path}.mp3", codec='mp3')
-
-            print("Audio conversion completed")
-
-            # Transcribe the audio (you need to implement your transcriber function)
-            transcribed_text = transcriber(f"{video_path}.mp3")['text']
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+                
+                
 
             print(f"Transcribed Text: {transcribed_text}")
 
             # Remove the video and audio files
-            os.remove(video_path)
-            os.remove(f"{video_path}.mp3")
+            os.remove(audio_file)
+            os.remove(txt)
+            os.remove(srt)
 
             return render(request, 'success.html', {
                 "text": transcribed_text
