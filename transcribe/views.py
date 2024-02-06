@@ -2,13 +2,15 @@ from django.shortcuts import render
 from transformers import pipeline
 from pytube import YouTube
 import os
-
-print("Instantiating the transcriber")
-transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
-print("Loaded the transcriber")
+import shutil
+from .fb_scrape import extract_video_from_url
+# print("Instantiating the transcriber")
+# transcriber = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", device="cuda")
+# print("Loaded the transcriber")
 
 
 import os
+from uuid import uuid4
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_http_methods
@@ -39,21 +41,40 @@ def transcribe_audio(request):
         if request.method == 'POST':
             audio = request.FILES["audio"]
             print(f"audio: {audio}")
+            
+            audioname= uuid4().__str__()+".mp3"
+            audio.name= audioname
 
             audio_file = Document.objects.create(
                                         name=audio.name,
                                         file=audio
                                         )
+            
+            os.rename(
+                f"media/{audio.name}",
+                f"media/{audioname}",
+                
+                )
             # print(f"audio_file: {audio_file.name}")
 
             # tc= TranscriberClass()
 
 
-            transcribed_text = transcriber(f"media/{audio.name}")['text']
+            # transcribed_text = transcriber(f"media/{audio.name}")['text']
+            os.system(f"python whisper-diarization/diarize.py -a media/{audioname} --whisper-model large-v3")
+            srt= f"media/{audioname[:-4]}.srt"
+            txt= f"media/{audioname[:-4]}.txt"
+            transcribed_text= ""
+            with open(srt) as f:
+                transcribed_text= f.read()
 
             print(f"Transcribed Text: {transcribed_text}")
-
-            os.remove(f"media/{audio.name}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            os.remove(f"media/{audioname}")
+            os.remove(srt)
+            print(f"txt= {txt}")
+            os.remove(txt)
+            
 
             return render(request, 'success.html', {
                 "text":transcribed_text
@@ -73,7 +94,6 @@ def transcribe_youtube(request):
     try:
         if request.method == 'POST':
             print("inside post")
-            # youtube_url = request.POST.get("youtube_url")
             youtube_url = request.POST["youtube_url"]
             print(f"YouTube URL: {youtube_url}")
 
@@ -85,7 +105,7 @@ def transcribe_youtube(request):
             audio_stream = yt.streams.filter(only_audio=True).first()
             media_directory = "media/"
             os.makedirs(media_directory, exist_ok=True)
-            audio_file = f"{yt.title.replace('|', '_')}.mp3"
+            audio_file = f"{uuid4().__str__()}.mp3"
 
             # audio_stream.download(output_path="media/", filename=yt.title)
             audio_stream.download(output_path="media/", filename=audio_file)
@@ -94,13 +114,28 @@ def transcribe_youtube(request):
             print("Bhai bahut badia..........")
 
             print("Bhai start transcribe..........")
+            audio_file= f"media/{audio_file}"
 
             # Transcribe the audio
-            transcribed_text = transcriber(f"media/{audio_file}")['text']
-            print("Bhai hogaya transcribe..........")
+            # transcribed_text = transcriber(f"media/{audio_file}")['text']
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
 
-            # Remove the downloaded audio file
-            os.remove(f"media/{audio_file}")
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            os.remove(audio_file)
+            os.remove(srt)
+            print(f"txt= {txt}")
+            os.remove(txt)
+            
+            
+            print("Bhai hogaya transcribe..........")
 
             return render(request, 'success.html', {
                 "text": transcribed_text
@@ -109,53 +144,279 @@ def transcribe_youtube(request):
         return HttpResponse(f"<h1>{e}</h1>")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ...MEGA NZ
+
+def meganz_upload_video(request):
+    return render(request, 'meganz.html')
+
+def transcribe_meganz_video(request):
+    print("Bhai request aa gyi..........")
+    uid= uuid4().__str__()
+    nz_folder= f"dummy_nz/{uid}"
+    os.makedirs(nz_folder)
+    try:
+        if request.method == 'POST':
+            print("inside post")
+            mega_url = request.POST["mega_url"]
+            print(f"MEGA.nz URL: {mega_url}")
+
+            os.system(
+                f"mega-get {mega_url} {nz_folder}"
+            )
+            
+            audio_file= f'media/{uid}.mp3'
+            
+            # convert audio2video
+            video_file= f'{nz_folder}/{os.listdir(nz_folder)[0]}'
+            print(f"downloaded video file: {video_file}")
+            clip= mp.VideoFileClip(video_file)
+            clip.audio.write_audiofile(audio_file)
+            
+            
+            
+            
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            os.remove(audio_file)
+            os.remove(srt)
+            print(f"txt= {txt}")
+            os.remove(txt)
+            
+            
+            print("Bhai hogaya transcribe..........")
+            shutil.rmtree(nz_folder)
+            return render(request, 'success.html', {
+                "text": transcribed_text
+            })
+    except Exception as e:
+        shutil.rmtree(nz_folder)
+        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import gdown
+# ...GDrive
+
+def gdrive_upload_video(request):
+    return render(request, 'gdrive.html')
+
+def transcribe_gdrive_video(request):
+    print("Bhai request aa gyi..........")
+    uid= uuid4().__str__()
+    nz_folder= f"dummy_nz/{uid}"
+    os.makedirs(nz_folder)
+    try:
+        if request.method == 'POST':
+            print("inside post")
+            file_id = request.POST["gdrivefileid"]
+            file_id= file_id.replace('https://drive.google.com/file/d/', '')
+            file_id= file_id[: file_id.index('/')]
+            
+            print(f"gdrive_file_id: {file_id}")
+            url = f'https://drive.google.com/uc?id={file_id}'
+            
+            audio_file_mp4= f'{nz_folder}/{uid}.mp4'
+            audio_file= f'{nz_folder}/{uid}.mp3'
+            
+            
+            gdown.download(url, audio_file_mp4, quiet=False)
+            
+            
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file_mp4} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            
+            
+            print("Bhai hogaya transcribe..........")
+            shutil.rmtree(nz_folder)
+            return render(request, 'success.html', {
+                "text": transcribed_text
+            })
+    except Exception as e:
+        shutil.rmtree(nz_folder)
+        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ...FB
+
+def fb_upload_video(request):
+    return render(request, 'facebook.html')
+
+def transcribe_fb_video(request):
+    print("Bhai request aa gyi..........")
+    uid= uuid4().__str__()
+    nz_folder= f"dummy_fb/{uid}"
+    os.makedirs(nz_folder)
+    try:
+        if request.method == 'POST':
+            print("inside post")
+            fb_url = request.POST["fb_url"]
+            print(f"FB URL: {fb_url}")
+
+
+            audio_file_mp4= f'{nz_folder}/{uid}.mp4'
+            audio_file= f'{nz_folder}/{uid}.mp3'
+            
+            
+            extract_video_from_url(url= fb_url, mp4_filename=audio_file_mp4)
+            
+            
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file_mp4} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+
+            print(f"Transcribed Text: {transcribed_text}")
+            transcribed_text= transcribed_text.replace('\n', "<br>")
+            
+            
+            
+            print("Bhai hogaya transcribe..........")
+            shutil.rmtree(nz_folder)
+            return render(request, 'success.html', {
+                "text": transcribed_text
+            })
+    except Exception as e:
+        shutil.rmtree(nz_folder)
+        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import moviepy.editor as mp
 
 def upload_video(request):
     return render(request, 'video.html')
 
-import re
 
-def hi(request):
-    try:
-        if request.method == 'POST':
-            video = request.FILES["video"]
-            print(f"Video: {video}")
-            
 
-            # Save the video file temporarily
-            video_file = Document.objects.create(
-                                        name=video.name,   
-                                        file = video                                                                      
-                                        )
-            
-            print('starting video to audio')
 
-            video_path = os.path.join('media', video.name)
-            print(f"Video Path: {video_path}")
-            print( f"media/{video.name}")
 
-            # Convert the video to audio            
-            clip = mp.VideoFileClip( f"media/{video.name}")
-            print("Accessed video")
 
-            clip.audio.write_audiofile(f"media/{video.name}")
 
-            print("audio mein convert hogayi")
-            # Transcribe the audio
-            transcribed_text = transcriber(f"media/{video.name}")['text']
-            
-            print(f"Transcribed Text: {transcribed_text}")
-            
-            # Remove the video and audio files
-            
-            os.remove(f"media/{video.name}")
-            
-            return render(request, 'success.html', {
-                "text":transcribed_text
-            })
-    except Exception as e:
-        return HttpResponse(f"<h1>{e}</h1>")
+
+
+
+
+
+
+
+
+
    
 import os
 from django.http import HttpResponse
@@ -163,13 +424,14 @@ from django.shortcuts import render
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
 
-def video_to_audio(request):
+def video_to_audio(request):    
     try:
         if request.method == 'POST':
             video = request.FILES["video"]
             print(f"Video: {video}")
 
-            video = video.name.replace(' ', '_')
+            videoname= uuid4().__str__()+".mp4"
+            video.name= videoname
 
             # Save the video file temporarily
             video_file = Document.objects.create(
@@ -177,29 +439,30 @@ def video_to_audio(request):
                                         file = video                                                                      
                                         )
             
-            video_path = f"media/{video.name}"
+            os.rename(
+                f"media/{video.name}",
+                f"media/{videoname}",
+                
+                )
+            
+            audio_file= f"media/{videoname}"
 
-            print('Starting video to audio')
-
-            print(f"media/{video.name}")
-
-            # Convert the video to audio
-            clip = VideoFileClip(video_path)
-            audio = clip.audio
-
-            # Write the audio file using 'mp3' codec
-            audio.write_audiofile(f"{video_path}.mp3", codec='mp3')
-
-            print("Audio conversion completed")
-
-            # Transcribe the audio (you need to implement your transcriber function)
-            transcribed_text = transcriber(f"{video_path}.mp3")['text']
+            
+            os.system(f"python whisper-diarization/diarize.py -a {audio_file} --whisper-model large-v3")
+            srt= f"{audio_file[:-4]}.srt"
+            txt= f"{audio_file[:-4]}.txt"
+            transcribed_text= ""
+            with open(txt) as f:
+                transcribed_text= f.read()
+                
+                
 
             print(f"Transcribed Text: {transcribed_text}")
 
             # Remove the video and audio files
-            os.remove(video_path)
-            os.remove(f"{video_path}.mp3")
+            os.remove(audio_file)
+            os.remove(txt)
+            os.remove(srt)
 
             return render(request, 'success.html', {
                 "text": transcribed_text

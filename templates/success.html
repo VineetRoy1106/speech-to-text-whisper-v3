@@ -2,6 +2,6 @@
 
 {% block content %}
  <h2>Success</h2>
- <p>"{{text}}"</p>
+ <p>{{text | safe}}</p>
  <p>Your audio file has been uploaded and transcribed successfully.</p>
 {% endblock %}

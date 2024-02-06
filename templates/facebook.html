@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="display: flex;">
+
+    
+
+    <div style="width: 50%; padding-left: 10px;">
+        <h1>Facebook Video Transcription</h1>
+        <form method="post" enctype="multipart/form-data" action="transcribefb">
+            {% csrf_token %}
+            <label for="fb_url">Facebook URL:</label><br>
+            <input type="text" id="fb_url" name="fb_url" required><br>
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}
