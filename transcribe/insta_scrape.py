@@ -19,8 +19,8 @@ print(
 
 
 
-reg1= pattern = '"mimeType="audio\\/mp4" [a-zA-Z="0-9 _><:/\\.]+BaseURL>[a-zA-Z="0-9 _><:/\\.?&;%-]+<\\'
-reg2= '"mimeType="audio\\/mp4" [a-zA-Z="0-9 _><:/\\.]+BaseURL>'
+# reg1= pattern = '"mimeType="audio\\/mp4" [a-zA-Z="0-9 _><:/\\.]+BaseURL>[a-zA-Z="0-9 _><:/\\.?&;%-]+<\\'
+# reg2= '"mimeType="audio\\/mp4" [a-zA-Z="0-9 _><:/\\.]+BaseURL>'
 
 
 
